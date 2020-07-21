@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <Target Name="PreBuild" AfterTargets="PreBuildEvent">
+    <Exec Command="echo 'Hello World'"/>
+    <Exec Command="gcc --shared -o obj/perf-interface.so perf-interface.c"/>
+  </Target>
+
+  <ItemGroup>
+    <None Include="obj/perf-interface.so" CopyToOutputDirectory="Always"/>
+  </ItemGroup>
+
+</Project>
