@@ -7,7 +7,7 @@ namespace PerfEvent
 {
     static class PInvoke
     {
-        const string DLL_NAME = "obj/perf-interface.so";
+        const string DLL_NAME = "perf-interface.so";
         [DllImport(DLL_NAME, EntryPoint = "pinvoke_start_perf")]
         public static extern unsafe int StartPerf();
 
