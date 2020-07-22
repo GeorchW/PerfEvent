@@ -32,7 +32,9 @@ namespace PerfEvent
 
         public void Dispose()
         {
+            if (fd == -1) return;
             RecordedInstructions = PInvoke.StopPerf(fd);
+            fd = -1;
         }
     }
 }
