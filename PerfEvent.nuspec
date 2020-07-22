@@ -9,6 +9,11 @@
     <license type="expression">MIT</license>
     <description>A simple tool to measure instruction counts.</description>
     <copyright>Copyright 2020</copyright>
+    <repository 
+      type="git"
+      url="https://github.com/GeorchW/PerfEvent"
+      branch="master"
+    />
 
     <dependencies>
       <group targetFramework="netcoreapp3.1">
