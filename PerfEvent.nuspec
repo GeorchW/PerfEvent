@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package >
+  <metadata>
+    <id>PerfEvent</id>
+    <version>0.1.0</version>
+    <authors>GeorchW</authors>
+    <owners>GeorchW</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <description>A simple tool to measure instruction counts.</description>
+    <copyright>Copyright 2020</copyright>
+
+    <dependencies>
+      <group targetFramework="netcoreapp3.1">
+      </group>
+    </dependencies>
+  </metadata>
+
+  <files>
+    <file src="src/bin/Release/netcoreapp3.1/*.dll" target="lib/netcoreapp3.1"/>
+    <file src="src/native/runtimes/**/*.so" target="runtimes"/>
+  </files>
+</package>
