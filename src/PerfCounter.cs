@@ -24,7 +24,7 @@ namespace PerfEvent
         public static extern long ReadCounter(IntPtr handles, int offset);
 
         [DllImport(DLL_NAME, EntryPoint = "pinvoke_get_counter_name")]
-        public static extern byte* GetCounterName(int offset);
+        public static extern IntPtr GetCounterName(int offset);
 
         [DllImport(DLL_NAME, EntryPoint = "pinvoke_close")]
         public static extern void Close(IntPtr handles);
@@ -87,21 +87,12 @@ namespace PerfEvent
             int numCounters = PInvoke.NumCounters();
             for (int i = 0; i < numCounters; i++)
             {
-                string name = GetNullTerminatedString(PInvoke.GetCounterName(i));
+                string name = Marshal.PtrToStringAnsi(PInvoke.GetCounterName(i));
                 long value = PInvoke.ReadCounter(handles, i);
                 typeof(PerformanceMetrics).GetProperty(name).SetValue(results, value);
                 // Console.WriteLine($"{name}: {value}");
             }
             return results;
-        }
-
-        private static unsafe string GetNullTerminatedString(byte* ptr)
-        {
-            string name;
-            int len = 0;
-            while (ptr[len] != 0) len++;
-            name = Encoding.UTF8.GetString(ptr, len);
-            return name;
         }
 
         public void Dispose()
