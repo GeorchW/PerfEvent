@@ -47,7 +47,7 @@ typedef struct {
         cpu_migrations;
 } Handles;
 
-Handles* pinvoke_start_perf() {
+Handles* pinvoke_init() {
     Handles* handles = malloc(sizeof(Handles));
     memset(handles, 0, sizeof(Handles));
     handles->instructions = perf_event_counter(PERF_TYPE_HARDWARE, PERF_COUNT_HW_INSTRUCTIONS, -1);
@@ -63,9 +63,12 @@ Handles* pinvoke_start_perf() {
     handles->cpu_migrations = perf_event_counter(PERF_TYPE_SOFTWARE, PERF_COUNT_SW_CPU_MIGRATIONS, handles->leader);
 
     ioctl(handles->leader, PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
-    ioctl(handles->leader, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
     
     return handles;
+}
+
+void pinvoke_start_perf(Handles* handles) {
+    ioctl(handles->leader, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
 }
 
 void pinvoke_stop_perf(Handles* handles) {

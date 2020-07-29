@@ -11,37 +11,39 @@ namespace test
         public void TestInstructionCounting()
         {
             int externalValue = 0;
-            long CountInstructions(int iterations)
+            PerformanceMetrics Benchmark(int iterations)
             {
-                var counter = new InstructionCounter();
-                using (counter)
+                using var counter = new PerfCounter();
+                counter.Start();
+                for (int i = 0; i < iterations; i++)
                 {
-                    for (int i = 0; i < iterations; i++)
-                    {
-                        externalValue += (int)Math.Sqrt(2);
-                    }
+                    externalValue += (int)Math.Sqrt(2);
                 }
-                return counter.Instructions;
+                counter.Stop();
+                return counter.GetResults();
             }
             for (int i = 0; i < 3; i++)
             {
-                long count = CountInstructions(1);
-                Console.WriteLine(count);
+                var measurement = Benchmark(1000);
             }
             int baseIterations = 1;
-            long overhead = CountInstructions(baseIterations);
-            Console.WriteLine($"Overhead:   {overhead}");
+            var overhead = Benchmark(baseIterations);
+            Console.WriteLine($"Overhead:   {overhead.Instructions}");
             int iterations = 1024;
-            long finalMeasurement = CountInstructions(iterations + baseIterations);
-            Console.WriteLine($"Final:      {finalMeasurement}");
-            Console.WriteLine($"Instructions per iteration (minus overhead): {(finalMeasurement - overhead) / (double)iterations:0.00}");
-            
-            Assert.That(overhead, Is.GreaterThan(0));
-            Assert.That(finalMeasurement, Is.GreaterThan(overhead));
-            Assert.That(finalMeasurement - overhead, Is.GreaterThan(iterations / 32));
+            var finalMeasurement = Benchmark(iterations + baseIterations);
+            Console.WriteLine($"Final:      {finalMeasurement.Instructions}");
+            var cleaned = finalMeasurement - overhead;
+            Console.WriteLine("Per iteration:");
+            Console.WriteLine($"Instructions: {cleaned.Instructions / (double)iterations:0.00}");
+            Console.WriteLine($"Cycles:       {cleaned.Cycles / (double)iterations:0.00}");
+            Console.WriteLine($"Task clock:   {cleaned.TaskClock / (double)iterations:0.00}");
+
+            Assert.That(overhead.Instructions, Is.GreaterThan(0));
+            Assert.That(finalMeasurement.Instructions, Is.GreaterThan(overhead.Instructions));
+            Assert.That(cleaned.Instructions, Is.GreaterThan(iterations / 32));
 
             // uncomment the following line to see the results
-            // Assert.Fail();
+            Assert.Fail();
         }
     }
 }

@@ -8,8 +8,11 @@ namespace PerfEvent
     unsafe static class PInvoke
     {
         const string DLL_NAME = "perf-interface.so";
+
+        [DllImport(DLL_NAME, EntryPoint = "pinvoke_init")]
+        public static extern IntPtr Init();
         [DllImport(DLL_NAME, EntryPoint = "pinvoke_start_perf")]
-        public static extern IntPtr StartPerf();
+        public static extern void StartPerf(IntPtr handles);
 
         [DllImport(DLL_NAME, EntryPoint = "pinvoke_stop_perf")]
         public static extern void StopPerf(IntPtr handles);
@@ -27,7 +30,7 @@ namespace PerfEvent
         public static extern void Close(IntPtr handles);
     }
 
-    public class InstructionCounter : IDisposable
+    public sealed class PerformanceMetrics
     {
         public long Instructions { get; private set; }
         public long Cycles { get; private set; }
@@ -40,36 +43,71 @@ namespace PerfEvent
         public long ContextSwitches { get; private set; }
         public long CpuMigrations { get; private set; }
 
+        private PerformanceMetrics() { }
+
+        public static PerformanceMetrics operator +(PerformanceMetrics left, PerformanceMetrics right)
+            => new PerformanceMetrics{
+                Instructions = left.Instructions + right.Instructions,
+                Cycles = left.Cycles + right.Cycles,
+                Branches = left.Branches + right.Branches,
+                BranchMisses = left.BranchMisses + right.BranchMisses,
+                CpuClock = left.CpuClock + right.CpuClock,
+                TaskClock = left.TaskClock + right.TaskClock,
+                PageFaults = left.PageFaults + right.PageFaults,
+                ContextSwitches = left.ContextSwitches + right.ContextSwitches,
+                CpuMigrations = left.CpuMigrations + right.CpuMigrations,
+            };
+        public static PerformanceMetrics operator -(PerformanceMetrics left, PerformanceMetrics right)
+            => new PerformanceMetrics{
+                Instructions = left.Instructions - right.Instructions,
+                Cycles = left.Cycles - right.Cycles,
+                Branches = left.Branches - right.Branches,
+                BranchMisses = left.BranchMisses - right.BranchMisses,
+                CpuClock = left.CpuClock - right.CpuClock,
+                TaskClock = left.TaskClock - right.TaskClock,
+                PageFaults = left.PageFaults - right.PageFaults,
+                ContextSwitches = left.ContextSwitches - right.ContextSwitches,
+                CpuMigrations = left.CpuMigrations - right.CpuMigrations,
+            };
+    }
+
+    public class PerfCounter : IDisposable
+    {
         IntPtr handles;
 
-        public unsafe InstructionCounter()
+        public unsafe PerfCounter() => handles = PInvoke.Init();
+
+        public void Start() => PInvoke.StartPerf(handles);
+
+        public void Stop() => PInvoke.StopPerf(handles);
+
+        public unsafe PerformanceMetrics GetResults()
         {
-            handles = PInvoke.StartPerf();
-            if (handles == IntPtr.Zero)
+            PerformanceMetrics results = (PerformanceMetrics)Activator.CreateInstance(typeof(PerformanceMetrics), true);
+            int numCounters = PInvoke.NumCounters();
+            for (int i = 0; i < numCounters; i++)
             {
-                throw new System.Exception("Could not start the counter");
+                string name = GetNullTerminatedString(PInvoke.GetCounterName(i));
+                long value = PInvoke.ReadCounter(handles, i);
+                typeof(PerformanceMetrics).GetProperty(name).SetValue(results, value);
+                // Console.WriteLine($"{name}: {value}");
             }
+            return results;
+        }
+
+        private static unsafe string GetNullTerminatedString(byte* ptr)
+        {
+            string name;
+            int len = 0;
+            while (ptr[len] != 0) len++;
+            name = Encoding.UTF8.GetString(ptr, len);
+            return name;
         }
 
         public void Dispose()
         {
             if (handles == IntPtr.Zero) return;
             PInvoke.StopPerf(handles);
-            int numCounters = PInvoke.NumCounters();
-            for (int i = 0; i < numCounters; i++)
-            {
-                string name;
-                unsafe
-                {
-                    var ptr = PInvoke.GetCounterName(i);
-                    int len = 0;
-                    while (ptr[len] != 0) len++;
-                    name = Encoding.UTF8.GetString(ptr, len);
-                }
-                long value = PInvoke.ReadCounter(handles, i);
-                this.GetType().GetProperty(name).SetValue(this, value);
-                // Console.WriteLine($"{name}: {value}");
-            }
             PInvoke.Close(handles);
             handles = IntPtr.Zero;
         }
