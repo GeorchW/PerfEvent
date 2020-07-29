@@ -5,26 +5,47 @@ using System.Runtime.InteropServices;
 
 namespace PerfEvent
 {
-    static class PInvoke
+    unsafe static class PInvoke
     {
         const string DLL_NAME = "perf-interface.so";
         [DllImport(DLL_NAME, EntryPoint = "pinvoke_start_perf")]
-        public static extern unsafe int StartPerf();
+        public static extern IntPtr StartPerf();
 
         [DllImport(DLL_NAME, EntryPoint = "pinvoke_stop_perf")]
-        public static extern long StopPerf(int fd);
+        public static extern void StopPerf(IntPtr handles);
+
+        [DllImport(DLL_NAME, EntryPoint = "pinvoke_num_counters")]
+        public static extern int NumCounters();
+
+        [DllImport(DLL_NAME, EntryPoint = "pinvoke_read_counter")]
+        public static extern long ReadCounter(IntPtr handles, int offset);
+
+        [DllImport(DLL_NAME, EntryPoint = "pinvoke_get_counter_name")]
+        public static extern byte* GetCounterName(int offset);
+
+        [DllImport(DLL_NAME, EntryPoint = "pinvoke_close")]
+        public static extern void Close(IntPtr handles);
     }
 
     public class InstructionCounter : IDisposable
     {
-        public long RecordedInstructions { get; private set; }
+        public long Instructions { get; private set; }
+        public long Cycles { get; private set; }
+        public long Branches { get; private set; }
+        public long BranchMisses { get; private set; }
 
-        int fd;
+        public long CpuClock { get; private set; }
+        public long TaskClock { get; private set; }
+        public long PageFaults { get; private set; }
+        public long ContextSwitches { get; private set; }
+        public long CpuMigrations { get; private set; }
+
+        IntPtr handles;
 
         public unsafe InstructionCounter()
         {
-            fd = PInvoke.StartPerf();
-            if (fd == -1)
+            handles = PInvoke.StartPerf();
+            if (handles == IntPtr.Zero)
             {
                 throw new System.Exception("Could not start the counter");
             }
@@ -32,9 +53,25 @@ namespace PerfEvent
 
         public void Dispose()
         {
-            if (fd == -1) return;
-            RecordedInstructions = PInvoke.StopPerf(fd);
-            fd = -1;
+            if (handles == IntPtr.Zero) return;
+            PInvoke.StopPerf(handles);
+            int numCounters = PInvoke.NumCounters();
+            for (int i = 0; i < numCounters; i++)
+            {
+                string name;
+                unsafe
+                {
+                    var ptr = PInvoke.GetCounterName(i);
+                    int len = 0;
+                    while (ptr[len] != 0) len++;
+                    name = Encoding.UTF8.GetString(ptr, len);
+                }
+                long value = PInvoke.ReadCounter(handles, i);
+                this.GetType().GetProperty(name).SetValue(this, value);
+                // Console.WriteLine($"{name}: {value}");
+            }
+            PInvoke.Close(handles);
+            handles = IntPtr.Zero;
         }
     }
 }

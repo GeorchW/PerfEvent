@@ -21,7 +21,7 @@ namespace test
                         externalValue += (int)Math.Sqrt(2);
                     }
                 }
-                return counter.RecordedInstructions;
+                return counter.Instructions;
             }
             for (int i = 0; i < 3; i++)
             {
